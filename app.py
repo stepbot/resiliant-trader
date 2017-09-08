@@ -36,7 +36,7 @@ def index():
 	res = ses.get(url,params=params)
 
 	#Get a stock's quote
-	return res.json()
+	return jsonify(res.json())
 
 if __name__ == "__main__":
 	app.run()
