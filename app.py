@@ -2,7 +2,7 @@ from flask import Flask
 from flask import jsonify
 
 import pip
-import robinhood
+from robinhood import Robinhood
 
 app = Flask(__name__)
 @app.route('/')
