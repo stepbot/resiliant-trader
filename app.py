@@ -1,14 +1,14 @@
 from flask import Flask
-from Robinhood import Robinhood
+import pip
 
 app = Flask(__name__)
 @app.route('/')
 def index():
-	#Setup
-	my_trader = Robinhood();
 
-	#Get a stock's quote
-	return my_trader.print_quote("AAPL")
+	installed_packages = pip.get_installed_distributions()
+	installed_packages_list = sorted(["%s==%s" % (i.key, i.version)
+	        for i in installed_packages])
+	return installed_packages_list
 
 if __name__ == "__main__":
 	app.run()
