@@ -28,7 +28,7 @@ def index():
 
 	params = {
 		'symbols': stock,
-		'interval': interval
+		'interval': interval,
 		'span': span,
 		'bounds': bounds
 	}
