@@ -1,2 +1,5 @@
 Flask==0.12.2
 gunicorn==19.7.1
+requests~=2.13.0
+six~=1.10.0
+-e git://github.com/Jamonek/Robinhood.git#egg=Robinhood
