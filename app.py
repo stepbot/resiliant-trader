@@ -8,10 +8,11 @@ app = Flask(__name__)
 @app.route('/')
 def index():
 
-	installed_packages = pip.get_installed_distributions()
-	installed_packages_list = sorted(["%s==%s" % (i.key, i.version)
-	        for i in installed_packages])
-	return jsonify(installed_packages_list)
+	#Setup
+	my_trader = Robinhood();
+
+	#Get a stock's quote
+	return my_trader.print_quote("AAPL")
 
 if __name__ == "__main__":
 	app.run()
