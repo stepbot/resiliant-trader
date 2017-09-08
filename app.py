@@ -9,7 +9,7 @@ app = Flask(__name__)
 def index():
 
 	#Setup
-	my_trader = Robinhood()
+	my_trader = Robinhood.Robinhood()
 
 	#Get a stock's quote
 	return my_trader.print_quote("AAPL")
