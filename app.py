@@ -12,7 +12,7 @@ def index():
 	my_trader = Robinhood.Robinhood()
 
 	#Get a stock's quote
-	return my_trader.print_quote("AAPL")
+	return my_trader.quote_data("AAPL")
 
 if __name__ == "__main__":
 	app.run()
