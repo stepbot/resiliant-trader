@@ -1,42 +1,46 @@
 from flask import Flask
 from flask import jsonify
+from robinhood import Robinhood
+import numpy as np
+import math
 
-import pip
-import requests
+
 
 app = Flask(__name__)
 @app.route('/')
 def index():
 
-	#Setup
-	ses = requests.session()
-	ses.headers = {
-		"Accept": "*/*",
-		"Accept-Encoding": "gzip, deflate",
-		"Accept-Language": "en;q=1, fr;q=0.9, de;q=0.8, ja;q=0.7, nl;q=0.6, it;q=0.5",
-		"Content-Type": "application/x-www-form-urlencoded; charset=utf-8",
-		"X-Robinhood-API-Version": "1.0.0",
-		"Connection": "keep-alive",
-		"User-Agent": "Robinhood/823 (iPhone; iOS 7.1.2; Scale/2.00)"
-	}
+	rh = Robinhood()
+	spyHist = rh.get_historical_quote('SPY','5minute','week')
+	tltHist = rh.get_historical_quote('TLT','5minute','week')
 
-	url = "https://api.robinhood.com/quotes/historicals/"
-	stock = 'AAPL'
-	interval = '5minute'
-	span = 'week'
-	bounds = 'regular'
+	spyPrices = spyHist[:,4]
+	spyVolumes = spyHist[:,5]
 
-	params = {
-		'symbols': stock,
-		'interval': interval,
-		'span': span,
-		'bounds': bounds
-	}
+	tltPrices = tltHist[:,4]
+	tltVolumes = tltHist[:,5]
 
-	res = ses.get(url,params=params)
+	spyVWAP = np.average(spyPrices, axis=0, weights=spyVolumes)
+	tltVWAP = np.average(tltPrices, axis=0, weights=tltVolumes)
 
-	#Get a stock's quote
-	return jsonify(res.json())
+	spyPricesNorm = spyPrices/spyVWAP
+	tltPricesNorm = tltPrices/tltVWAP
+
+	spyVolatility = np.std(spyPricesNorm)
+	tltVolatility = np.std(tltPricesNorm)
+
+	totalVolatility = spyVolatility+tltVolatility
+
+	spyRawAllocation = 1-(spyVolatility/totalVolatility)
+	spyAllocation = 1/(1+math.exp(-20*(spyRawAllocation-.5)))
+	if spyAllocation > 1:
+		spyAllocation = 1
+	if spyAllocation < 0:
+		spyAllocation = 0
+
+	#return jsonify(spyVolumes.shape())
+	return jsonify(spyAllocation)
+	#return jsonify(sharesTraded)
 
 if __name__ == "__main__":
 	app.run()
