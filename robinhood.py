@@ -64,9 +64,103 @@ class Robinhood:
         }
         self.session.headers = self.headers
 
+    def login_prompt(self): #pragma: no cover
+        """Prompts user for username and password and calls login()."""
+        username = input("Username: ")
+        password = getpass.getpass()
+        return self.login(username=username, password=password)
+
+    def login(
+            self,
+            username,
+            password,
+            mfa_code=None
+        ):
+        """save and test login info for Robinhood accounts
+        Args:
+            username (str): username
+            password (str): password
+        Returns:
+            (bool): received valid auth token
+        """
+        self.username = username
+        self.password = password
+        payload = {
+            'password': self.password,
+            'username': self.username
+        }
+
+        if mfa_code:
+            payload['mfa_code'] = mfa_code
+
+        try:
+            res = self.session.post(
+                self.endpoints['login'],
+                data=payload
+            )
+            res.raise_for_status()
+            data = res.json()
+        except requests.exceptions.HTTPError:
+            raise RH_exception.LoginFailed()
+
+        if 'mfa_required' in data.keys():           #pragma: no cover
+            raise RH_exception.TwoFactorRequired()  #requires a second call to enable 2FA
+
+        if 'token' in data.keys():
+            self.auth_token = data['token']
+            self.headers['Authorization'] = 'Token ' + self.auth_token
+            return True
+
+        return False
+
+    def logout(self):
+        """logout from Robinhood
+        Returns:
+            (:obj:`requests.request`) result from logout endpoint
+        """
+        flag = False
+        try:
+            req = self.session.post(self.endpoints['logout'])
+            req.raise_for_status()
+
+        except requests.exceptions.HTTPError as err_msg:
+            warnings.warn('Failed to log out ' + repr(err_msg))
+
+        self.headers['Authorization'] = None
+        self.auth_token = None
+
+        if req.status_code == 200:
+            flag = True
+
+        return flag
+
     ##############################
     #GET DATA
     ##############################
+
+    def instruments(self, stock):
+        """fetch instruments endpoint
+        Args:
+            stock (str): stock ticker
+        Returns:
+            (:obj:`dict`): JSON contents from `instruments` endpoint
+        """
+        res = self.session.get(
+            self.endpoints['instruments'],
+            params={'query': stock.upper()}
+        )
+        res.raise_for_status()
+        res = res.json()
+
+        # if requesting all, return entire object so may paginate with ['next']
+        if (stock == ""):
+            return res
+
+        return res['results']
+
+    def get_url(self, url):
+        """flat wrapper for fetching URL directly"""
+        return self.session.get(url).json()
 
     def get_historical_quote(
             self,
@@ -118,3 +212,135 @@ class Robinhood:
 
 
         return numpyHistoricals
+
+    def quote_data(self, stock=''):
+        """fetch stock quote
+        Args:
+            stock (str): stock ticker, prompt if blank
+        Returns:
+            (:obj:`dict`): JSON contents from `quotes` endpoint
+        """
+        url = None
+        if stock.find(',') == -1:
+            url = str(self.endpoints['quotes']) + str(stock) + "/"
+        else:
+            url = str(self.endpoints['quotes']) + "?symbols=" + str(stock)
+        #Check for validity of symbol
+        try:
+            req = requests.get(url)
+            req.raise_for_status()
+            data = req.json()
+        except requests.exceptions.HTTPError:
+            raise NameError('Invalid Symbol: ' + stock) #TODO: custom exception
+
+        return data
+
+
+
+    def ask_price(self, stock=''):
+        """get asking price for a stock
+        Note:
+            queries `quote` endpoint, dict wrapper
+        Args:
+            stock (str): stock ticker
+        Returns:
+            (float): ask price
+        """
+        data = self.quote_data(stock)
+        return float(data['ask_price'])
+
+    def bid_price(self, stock=''):
+        """get bid price for a stock
+        Note:
+            queries `quote` endpoint, dict wrapper
+        Args:
+            stock (str): stock ticker
+        Returns:
+            (float): bid price
+        """
+        data = self.quote_data(stock)
+        return float(data['bid_price'])
+
+    def get_account(self):
+        """fetch account information
+        Returns:
+            (:obj:`dict`): `accounts` endpoint payload
+        """
+        res = self.session.get(self.endpoints['accounts'])
+        res.raise_for_status()  #auth required
+        res = res.json()
+        return res['results'][0]
+
+    ##############################
+    # PORTFOLIOS DATA
+    ##############################
+
+    def portfolios(self):
+        """Returns the user's portfolio data."""
+        req = self.session.get(self.endpoints['portfolios'])
+        req.raise_for_status()
+        return req.json()['results'][0]
+
+    def adjusted_equity_previous_close(self):
+        """wrapper for portfolios
+        get `adjusted_equity_previous_close` value
+        """
+        return float(self.portfolios()['adjusted_equity_previous_close'])
+
+    def equity(self):
+        """wrapper for portfolios
+        get `equity` value
+        """
+        return float(self.portfolios()['equity'])
+
+    ##############################
+    # POSITIONS DATA
+    ##############################
+
+    def securities_owned(self):
+        """
+        Returns a list of symbols of securities of which there are more
+        than zero shares in user's portfolio.
+        """
+        return self.session.get(self.endpoints['positions']+'?nonzero=true').json()
+
+    ##############################
+    #PLACE ORDER
+    ##############################
+
+    def check_order_status(self,url):
+        orderOutcomeDictionary = {
+            'queued':'unresolved',
+            'unconfirmed':'unresolved',
+            'confirmed':'unresolved',
+            'partially_filled':'unresolved',
+            'filled':'success',
+            'rejected':'failure',
+            'canceled':'failure',
+            'failed':'failure'
+        }
+        orderResponse = self.get_url(url)
+        return orderOutcomeDictionary[orderResponse['state']]
+
+
+
+
+    def place_immediate_market_order(self,instrument,symbol,time_in_force,quantity,side,price=0.0):
+        payload = {
+            'account': self.get_account()['url'],
+            'instrument': instrument,
+            'quantity': quantity,
+            'side': side,
+            'symbol': symbol,
+            'time_in_force': time_in_force,
+            'trigger': 'immediate',
+            'type': 'market'
+        }
+        if side == 'buy':
+            payload['price']=price
+        res = self.session.post(
+            self.endpoints['orders'],
+            data=payload
+        )
+
+        return res.json()

@@ -3,3 +3,5 @@ gunicorn~=19.7.1
 requests~=2.13.0
 six~=1.10.0
 numpy~=1.11.3
+redis~=2.10.5
+celery~=4.1.0
