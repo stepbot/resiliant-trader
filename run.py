@@ -272,7 +272,7 @@ def run_trader():
     if success:
         if spyRequired > 0.0:
             print('buying ',spyRequired,' of SPY')
-            spyBuyOrder = rh.place_immediate_market_order(spyInstrumentUrl,'SPY','gfd',-spyRequired,'sell',spyBuyPrice)
+            spyBuyOrder = rh.place_immediate_market_order(spyInstrumentUrl,'SPY','gfd',spyRequired,'sell',spyBuyPrice)
             print(spyBuyOrder)
 
             orderOutcome = 'unresolved'
@@ -298,7 +298,7 @@ def run_trader():
     if success:
         if tltRequired > 0.0:
             print('buying ',tltRequired,' of TLT')
-            tltBuyOrder = rh.place_immediate_market_order(tltInstrumentUrl,'TLT','gfd',-tltRequired,'sell',tltBuyPrice)
+            tltBuyOrder = rh.place_immediate_market_order(tltInstrumentUrl,'TLT','gfd',tltRequired,'sell',tltBuyPrice)
             print(tltBuyOrder)
 
             orderOutcome = 'unresolved'
