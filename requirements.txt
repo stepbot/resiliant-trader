@@ -5,3 +5,4 @@ six~=1.10.0
 numpy~=1.11.3
 rq~=0.8.2
 apscheduler~=3.3.1
+pymongo~=3.5.1
