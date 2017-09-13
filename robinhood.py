@@ -4,6 +4,7 @@
 
 import getpass
 import requests
+from datetime import datetime
 
 import numpy as np
 
@@ -137,6 +138,28 @@ class Robinhood:
     ##############################
     #GET DATA
     ##############################
+    def marketOpenCheck(self):
+        canTrade = True
+        now = datetime.utcnow()
+
+        url = self.endpoints['markets']
+        marketData = (self.get_url(url)['results'])
+        for market in marketData:
+            marketTimeData = self.get_url(market['todays_hours'])
+            status = marketTimeData['is_open']
+            openTime = marketTimeData['opens_at']
+            openTimeObject = datetime.strptime(openTime,'%Y-%m-%dT%H:%M:%SZ')
+            closeTime = marketTimeData['closes_at']
+            closeTimeObject= datetime.strptime(closeTime,'%Y-%m-%dT%H:%M:%SZ')
+            if status == 'false':
+                canTrade = False
+            if now < openTimeObject:
+                canTrade = False
+            if now > closeTimeObject:
+                canTrade = False
+        return canTrade
+
+
 
     def instruments(self, stock):
         """fetch instruments endpoint

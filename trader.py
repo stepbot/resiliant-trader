@@ -68,10 +68,19 @@ def calcAlloc(rh):
 success = True
 
 rh = Robinhood()
-success = rh.login(username=config.rhuser, password=config.rhpass)
+success = rh.marketOpenCheck()
+if not success:
+    print('markets are closed')
+else:
+    print('markets are open')
+
+if success:
+    success = rh.login(username=config.rhuser, password=config.rhpass)
 
 if success:
     print('login succesful')
+else:
+    print('login unsuccesful')
 
 
 if success:
@@ -299,8 +308,8 @@ if success:
 if not success:
     print('unable to buy required tlt')
 
-
-success = rh.logout()
+if success:
+    success = rh.logout()
 if not success:
     print('unable to logout')
 else:
