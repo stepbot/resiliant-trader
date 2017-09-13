@@ -5,7 +5,15 @@ import os
 import random
 import time
 
-import config
+try:
+    import config
+    rhuser = config.rhuser
+    rhpass = config.rhpass
+    print('using local config file')
+except:
+    print('using environment variable')
+    rhuser = os.getenv('RHUSER')
+    rhpass = os.getenv('RHPASS')
 
 def run_gather_data():
   #code that gets and logs performance data
@@ -81,7 +89,7 @@ def run_trader():
         print('markets are open')
 
     if success:
-        success = rh.login(username=config.rhuser, password=config.rhpass)
+        success = rh.login(username=rhuser, password=rhpass)
 
     if success:
         print('login succesful')

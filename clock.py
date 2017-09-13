@@ -1,7 +1,7 @@
 from apscheduler.schedulers.blocking import BlockingScheduler
 from rq import Queue
 from worker import conn
-from run import run_gather_comments
+from run import run_gather_data, run_trader
 
 import logging
 import sys
