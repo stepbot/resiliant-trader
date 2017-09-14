@@ -4,20 +4,49 @@ import math
 import os
 import random
 import time
+import smtplib
+import datetime
+
 
 try:
     import config
     rhuser = config.rhuser
     rhpass = config.rhpass
+    guser = config.guser
+    gpass = config.gpass
     print('using local config file')
 except:
     print('using environment variable')
     rhuser = os.getenv('RHUSER')
     rhpass = os.getenv('RHPASS')
+    guser = os.getenv('GUSER')
+    gpass = os.getenv('GPASS')
 
 def run_gather_data():
   #code that gets and logs performance data
   print("Gathering Data")
+
+def send_email(user, pwd, recipient, subject, body):
+
+    gmail_user = user
+    gmail_pwd = pwd
+    FROM = user
+    TO = recipient if type(recipient) is list else [recipient]
+    SUBJECT = subject
+    TEXT = body
+
+    # Prepare actual message
+    message = """From: %s\nTo: %s\nSubject: %s\n\n%s
+    """ % (FROM, ", ".join(TO), SUBJECT, TEXT)
+    try:
+        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
+        server.ehlo()
+        server.login(gmail_user, gmail_pwd)
+        server.sendmail(FROM, TO, message)
+        server.close()
+        print('successfully sent the mail')
+    except:
+        print("failed to send mail")
 
 def recommendInitialTarget(portfolioValue,spyAllocationPercentage,tltAllocationPercentage,spyBuyPrice,tltBuyPrice):
     spyTargetAllocation = spyAllocationPercentage*portfolioValue
@@ -78,253 +107,311 @@ def calcAlloc(rh):
 	return spyAllocation
 
 def run_trader():
-    print("running trader")
-    success = True
+    try:
+        print("running trader at: "+str(datetime.datetime.now()))
+        message = "running trader at: "+str(datetime.datetime.now())
+        success = True
 
-    rh = Robinhood()
-    success = rh.marketOpenCheck()
-    if not success:
-        print('markets are closed')
-    else:
-        print('markets are open')
-
-    if success:
-        success = rh.login(username=rhuser, password=rhpass)
-
-    if success:
-        print('login succesful')
-    else:
-        print('login unsuccesful')
-
-
-    if success:
-        #exit extra postions
-        openPositions = rh.securities_owned()['results']
-
-        sellOrders = {}
-        for position in openPositions:
-            instrumentURL = position['instrument']
-            positionTicker = rh.get_url(instrumentURL)['symbol']
-            positionQuantity = position['quantity']
-            if (positionTicker != 'SPY') and (positionTicker != 'TLT'):
-                print('position in ', positionTicker, ' is not needed, selling')
-                stock_instrument = rh.instruments(positionTicker)[0]
-                sellOrders[positionTicker] = rh.place_immediate_market_order(instrumentURL,positionTicker,'gfd',positionQuantity,'sell')
-        if sellOrders == {}:
-            print('no extra positions found to close')
+        rh = Robinhood()
+        success = rh.marketOpenCheck()
+        if not success:
+            print('markets are closed')
+            message += '\nmarkets are closed'
         else:
-            print(sellOrders)
+            print('markets are open')
+            message += '\nmarkets are open'
 
-        orderOutcome = 'unresolved'
+        if success:
+            success = rh.login(username=rhuser, password=rhpass)
 
-        while orderOutcome != 'resolved':
-            remainingUnresolved = False
+        if success:
+            print('login succesful')
+            message += '\nlogin succesful'
+        else:
+            print('login unsuccesful')
+            message += '\nlogin unsuccesful'
+
+
+        if success:
+            #exit extra postions
+            openPositions = rh.securities_owned()['results']
+
+            sellOrders = {}
+            for position in openPositions:
+                instrumentURL = position['instrument']
+                positionTicker = rh.get_url(instrumentURL)['symbol']
+                positionQuantity = position['quantity']
+                if (positionTicker != 'SPY') and (positionTicker != 'TLT'):
+                    print('position in ', positionTicker, ' is not needed, selling')
+                    stock_instrument = rh.instruments(positionTicker)[0]
+                    sellOrders[positionTicker] = rh.place_immediate_market_order(instrumentURL,positionTicker,'gfd',positionQuantity,'sell')
+            if sellOrders == {}:
+                print('no extra positions found to close')
+                message += '\nno extra positions found to close'
+            else:
+                print(sellOrders)
+
+            orderOutcome = 'unresolved'
+
+            while orderOutcome != 'resolved':
+                remainingUnresolved = False
+                for order in sellOrders:
+                    orderDetail = sellOrders[order]
+                    orderDetail['status'] = rh.check_order_status(orderDetail['url'])
+                    if orderDetail['status'] == 'unresolved':
+                        remainingUnresolved = True
+                if not remainingUnresolved:
+                    orderOutcome = 'resolved'
+                else:
+                    print('remaining unresolved orders, waiting')
+                    message += '\nremaining unresolved orders, waiting'
+                    time.sleep(60)
+
+
             for order in sellOrders:
                 orderDetail = sellOrders[order]
-                orderDetail['status'] = rh.check_order_status(orderDetail['url'])
-                if orderDetail['status'] == 'unresolved':
-                    remainingUnresolved = True
-            if not remainingUnresolved:
-                orderOutcome = 'resolved'
-            else:
-                print('remaining unresolved orders, waiting')
-                time.sleep(60)
+                if orderDetail['status'] == 'failure':
+                    success = False
+
+        if not success:
+            print('unable to sell extra positions correctly')
+            message += '\nunable to sell extra positions correctly'
+
+        if success:
+            #get portfolio current value
+            portfolioValue = rh.equity()
+            print('portfolioValue =', portfolioValue)
+            message += '\nportfolioValue = '
+            message += str(portfolioValue)
+
+            #allocate portfolio
+            spyAllocationPercentage = calcAlloc(rh)
+            tltAllocationPercentage = 1-spyAllocationPercentage
+            print('spyAllocationPercentage = ', spyAllocationPercentage)
+            message += '\nspyAllocationPercentage = '
+            message += str(spyAllocationPercentage)
+            print('tltAllocationPercentage = ', tltAllocationPercentage)
+            message += '\ntltAllocationPercentage = '
+            message += str(tltAllocationPercentage)
+
+            spyTargetAllocation = spyAllocationPercentage*portfolioValue
+            tltTargetAllocation = tltAllocationPercentage*portfolioValue
+            print('spyTargetAllocation = ', spyTargetAllocation)
+            message += '\nspyTargetAllocation = '
+            message += str(spyTargetAllocation)
+            print('tltTargetAllocation = ', tltTargetAllocation)
+            message += '\ntltTargetAllocation = '
+            message += str(tltTargetAllocation)
+
+            #get pricing data
+            spyAskPrice = rh.ask_price('SPY')
+            spyBidPrice = rh.bid_price('SPY')
+            spyAvgCost = (spyAskPrice+spyBidPrice)/2
+            spyBuyPrice = spyAskPrice+(spyAskPrice - spyBidPrice)
+            spySellPrice = spyBidPrice-(spyAskPrice - spyBidPrice)
+            print('spyAskPrice = ', spyAskPrice)
+            message += '\nspyAskPrice = '
+            message += str(spyAskPrice)
+            print('spyBidPrice = ', spyBidPrice)
+            message += '\nspyBidPrice = '
+            message += str(spyBidPrice)
+
+            tltAskPrice = rh.ask_price('TLT')
+            tltBidPrice = rh.bid_price('TLT')
+            tltAvgCost = (tltAskPrice+tltBidPrice)/2
+            tltBuyPrice = tltAskPrice+(tltAskPrice - tltBidPrice)
+            tltSellPrice = tltBidPrice-(tltAskPrice - tltBidPrice)
+            print('tltAskPrice = ', tltAskPrice)
+            message += '\ntltAskPrice = '
+            message += str(tltAskPrice)
+            print('tltBidPrice = ', tltBidPrice)
+            message += '\ntltBidPrice = '
+            message += str(tltBidPrice)
+
+            #recommend position sizes
+            [spyTargetShares,tltTargetShares] = recommendTarget(portfolioValue,spyAllocationPercentage,tltAllocationPercentage,spyBuyPrice,tltBuyPrice)
+
+            print('spyTargetShares = ', spyTargetShares)
+            message += '\nspyTargetShares = '
+            message += str(spyTargetShares)
+            print('tltTargetShares = ', tltTargetShares)
+            message += '\ntltTargetShares = '
+            message += str(tltTargetShares)
+
+            targetPurchaseCost = targetTotalCost(spyTargetShares,tltTargetShares,spyBuyPrice,tltBuyPrice)
 
 
-        for order in sellOrders:
-            orderDetail = sellOrders[order]
-            if orderDetail['status'] == 'failure':
-                success = False
+            spyTargetAllocationPercentage = allocationPercentage(spyTargetShares,spyBuyPrice,targetPurchaseCost)
+            tltTargetAllocationPercentage = allocationPercentage(tltTargetShares,tltBuyPrice,targetPurchaseCost)
+            print('spyTargetAllocationPercentage = ',spyTargetAllocationPercentage)
+            message += '\nspyTargetAllocationPercentage = '
+            message += str(spyTargetAllocationPercentage)
+            print('tltTargetAllocationPercentage = ',tltTargetAllocationPercentage)
+            message += '\ntltTargetAllocationPercentage = '
+            message += str(tltTargetAllocationPercentage)
 
-    if not success:
-        print('unable to sell extra positions correctly')
+            targetLoss = allocationLoss(spyTargetAllocationPercentage,spyAllocationPercentage,tltTargetAllocationPercentage,tltAllocationPercentage)
+            print('target loss = ',targetLoss)
 
-    if success:
-        #get portfolio current value
-        portfolioValue = rh.equity()
-        print('portfolioValue =', portfolioValue)
+            targetRemainingCash = portfolioValue-targetPurchaseCost
+            print('targetPurchaseCost = ', targetPurchaseCost)
+            message += '\ntargetPurchaseCost = '
+            message += str(targetPurchaseCost)
+            print('targetRemainingCash = ', targetRemainingCash)
+            message += '\ntargetRemainingCash = '
+            message += str(targetRemainingCash)
 
-        #allocate portfolio
-        spyAllocationPercentage = calcAlloc(rh)
-        tltAllocationPercentage = 1-spyAllocationPercentage
-        print('spyAllocationPercentage = ', spyAllocationPercentage)
-        print('tltAllocationPercentage = ', tltAllocationPercentage)
+            #detemine required rebalancing
+            spyRequired = spyTargetShares
+            tltRequired = tltTargetShares
+            for position in openPositions:
+                instrumentURL = position['instrument']
+                positionTicker = rh.get_url(instrumentURL)['symbol']
+                positionQuantity = float(position['quantity'])
+                if (positionTicker == 'SPY'):
+                    spyRequired = spyTargetShares-positionQuantity
+                if (positionTicker == 'TLT'):
+                    tltRequired = tltTargetShares-positionQuantity
 
-        spyTargetAllocation = spyAllocationPercentage*portfolioValue
-        tltTargetAllocation = tltAllocationPercentage*portfolioValue
-        print('spyTargetAllocation = ', spyTargetAllocation)
-        print('tltTargetAllocation = ', tltTargetAllocation)
+            print('spyRequired = ',spyRequired)
+            message += '\nspyRequired = '
+            message += str(spyRequired)
+            print('tltRequired = ',tltRequired)
+            message += '\ntltRequired = '
+            message += str(tltRequired)
 
-        #get pricing data
-        spyAskPrice = rh.ask_price('SPY')
-        spyBidPrice = rh.bid_price('SPY')
-        spyAvgCost = (spyAskPrice+spyBidPrice)/2
-        spyBuyPrice = spyAskPrice+(spyAskPrice - spyBidPrice)
-        spySellPrice = spyBidPrice-(spyAskPrice - spyBidPrice)
-        print('spyAskPrice = ', spyAskPrice)
-        print('spyBidPrice = ', spyBidPrice)
+            spyInstrumentUrl = (rh.instruments('SPY')[0])['url']
+            tltInstrumentUrl = (rh.instruments('TLT')[0])['url']
 
-        tltAskPrice = rh.ask_price('TLT')
-        tltBidPrice = rh.bid_price('TLT')
-        tltAvgCost = (tltAskPrice+tltBidPrice)/2
-        tltBuyPrice = tltAskPrice+(tltAskPrice - tltBidPrice)
-        tltSellPrice = tltBidPrice-(tltAskPrice - tltBidPrice)
-        print('tltAskPrice = ', tltAskPrice)
-        print('tltBidPrice = ', tltBidPrice)
+        if success:
+            #sell positions
+            if spyRequired < 0.0:
+                print('selling ',-spyRequired,' of SPY')
+                spySellOrder = rh.place_immediate_market_order(spyInstrumentUrl,'SPY','gfd',-spyRequired,'sell')
+                print(spySellOrder)
 
-        #recommend position sizes
-        [spyTargetShares,tltTargetShares] = recommendTarget(portfolioValue,spyAllocationPercentage,tltAllocationPercentage,spyBuyPrice,tltBuyPrice)
+                orderOutcome = 'unresolved'
 
-        print('spyTargetShares = ', spyTargetShares)
-        print('tltTargetShares = ', tltTargetShares)
-
-        targetPurchaseCost = targetTotalCost(spyTargetShares,tltTargetShares,spyBuyPrice,tltBuyPrice)
-
-
-        spyTargetAllocationPercentage = allocationPercentage(spyTargetShares,spyBuyPrice,targetPurchaseCost)
-        tltTargetAllocationPercentage = allocationPercentage(tltTargetShares,tltBuyPrice,targetPurchaseCost)
-        print('spyTargetAllocationPercentage = ',spyTargetAllocationPercentage)
-        print('tltTargetAllocationPercentage = ',tltTargetAllocationPercentage)
-
-        targetLoss = allocationLoss(spyTargetAllocationPercentage,spyAllocationPercentage,tltTargetAllocationPercentage,tltAllocationPercentage)
-        print('target loss = ',targetLoss)
-
-        targetRemainingCash = portfolioValue-targetPurchaseCost
-        print('targetPurchaseCost = ', targetPurchaseCost)
-        print('targetRemainingCash = ', targetRemainingCash)
-
-        #detemine required rebalancing
-        spyRequired = spyTargetShares
-        tltRequired = tltTargetShares
-        for position in openPositions:
-            instrumentURL = position['instrument']
-            positionTicker = rh.get_url(instrumentURL)['symbol']
-            positionQuantity = float(position['quantity'])
-            if (positionTicker == 'SPY'):
-                spyRequired = spyTargetShares-positionQuantity
-            if (positionTicker == 'TLT'):
-                tltRequired = tltTargetShares-positionQuantity
-
-        print('spyRequired = ',spyRequired)
-        print('tltRequired = ',tltRequired)
-
-        spyInstrumentUrl = (rh.instruments('SPY')[0])['url']
-        tltInstrumentUrl = (rh.instruments('TLT')[0])['url']
-
-    if success:
-        #sell positions
-        if spyRequired < 0.0:
-            print('selling ',-spyRequired,' of SPY')
-            spySellOrder = rh.place_immediate_market_order(spyInstrumentUrl,'SPY','gfd',-spyRequired,'sell')
-            print(spySellOrder)
-
-            orderOutcome = 'unresolved'
-
-            while orderOutcome != 'resolved':
-                remainingUnresolved = False
-                spySellOrder['status'] = rh.check_order_status(spySellOrder['url'])
-                if orderResponse['status'] == 'unresolved':
-                    remainingUnresolved = True
-                if not remainingUnresolved:
-                    orderOutcome = 'resolved'
-                else:
-                    print('remaining unresolved orders, waiting')
-                    time.sleep(60)
-
-
-
-
-            if spySellOrder['status'] == 'failure':
-                success = False
-
-    if not success:
-        print('unable to sell required spy')
-
-    if success:
-        if tltRequired < 0.0:
-            print('selling ',-tltRequired,' of TLT')
-            tltSellOrder = rh.place_immediate_market_order(tltInstrumentUrl,'TLT','gfd',-tltRequired,'sell')
-            print(tltSellOrder)
-
-            orderOutcome = 'unresolved'
-
-            while orderOutcome != 'resolved':
-                remainingUnresolved = False
-                tltSellOrder['status'] = rh.check_order_status(tltSellOrder['url'])
-                if orderResponse['status'] == 'unresolved':
-                    remainingUnresolved = True
-                if not remainingUnresolved:
-                    orderOutcome = 'resolved'
-                else:
-                    print('remaining unresolved orders, waiting')
-                    time.sleep(60)
+                while orderOutcome != 'resolved':
+                    remainingUnresolved = False
+                    spySellOrder['status'] = rh.check_order_status(spySellOrder['url'])
+                    if orderResponse['status'] == 'unresolved':
+                        remainingUnresolved = True
+                    if not remainingUnresolved:
+                        orderOutcome = 'resolved'
+                    else:
+                        print('remaining unresolved spySell, waiting')
+                        message += '\nremaining unresolved spySell, waiting'
+                        time.sleep(60)
 
 
 
-            if tltSellOrder['status'] == 'failure':
-                success = False
 
-    if not success:
-        print('unable to sell required tlt')
+                if spySellOrder['status'] == 'failure':
+                    success = False
 
+        if not success:
+            print('unable to sell required spy')
+            message += '\nunable to sell required spy'
 
-    #buy positions
-    if success:
-        if spyRequired > 0.0:
-            print('buying ',spyRequired,' of SPY')
-            spyBuyOrder = rh.place_immediate_market_order(spyInstrumentUrl,'SPY','gfd',spyRequired,'sell',spyBuyPrice)
-            print(spyBuyOrder)
+        if success:
+            if tltRequired < 0.0:
+                print('selling ',-tltRequired,' of TLT')
+                tltSellOrder = rh.place_immediate_market_order(tltInstrumentUrl,'TLT','gfd',-tltRequired,'sell')
+                print(tltSellOrder)
 
-            orderOutcome = 'unresolved'
+                orderOutcome = 'unresolved'
 
-            while orderOutcome != 'resolved':
-                remainingUnresolved = False
-                spyBuyOrder['status'] = rh.check_order_status(spyBuyOrder['url'])
-                if orderResponse['status'] == 'unresolved':
-                    remainingUnresolved = True
-                if not remainingUnresolved:
-                    orderOutcome = 'resolved'
-                else:
-                    print('remaining unresolved orders, waiting')
-                    time.sleep(60)
-
-
-
-            if spyBuyOrder['status'] == 'failure':
-                success = False
-    if not success:
-        print('unable to buy required spy')
-
-    if success:
-        if tltRequired > 0.0:
-            print('buying ',tltRequired,' of TLT')
-            tltBuyOrder = rh.place_immediate_market_order(tltInstrumentUrl,'TLT','gfd',tltRequired,'sell',tltBuyPrice)
-            print(tltBuyOrder)
-
-            orderOutcome = 'unresolved'
-
-            while orderOutcome != 'resolved':
-                remainingUnresolved = False
-                tltBuyOrder['status'] = rh.check_order_status(tltBuyOrder['url'])
-                if orderResponse['status'] == 'unresolved':
-                    remainingUnresolved = True
-                if not remainingUnresolved:
-                    orderOutcome = 'resolved'
-                else:
-                    print('remaining unresolved orders, waiting')
-                    time.sleep(60)
+                while orderOutcome != 'resolved':
+                    remainingUnresolved = False
+                    tltSellOrder['status'] = rh.check_order_status(tltSellOrder['url'])
+                    if orderResponse['status'] == 'unresolved':
+                        remainingUnresolved = True
+                    if not remainingUnresolved:
+                        orderOutcome = 'resolved'
+                    else:
+                        print('remaining unresolved tltSell, waiting')
+                        message += '\nremaining unresolved tltSell, waiting'
+                        time.sleep(60)
 
 
 
-            if tltBuyOrder['status'] == 'failure':
-                success = False
+                if tltSellOrder['status'] == 'failure':
+                    success = False
 
-    if not success:
-        print('unable to buy required tlt')
+        if not success:
+            print('unable to sell required tlt')
+            message += '\nunable to sell required tlt'
 
-    if success:
-        success = rh.logout()
-    if not success:
-        print('unable to logout')
-    else:
-        print('succesfully logged out')
+
+        #buy positions
+        if success:
+            if spyRequired > 0.0:
+                print('buying ',spyRequired,' of SPY')
+                spyBuyOrder = rh.place_immediate_market_order(spyInstrumentUrl,'SPY','gfd',spyRequired,'sell',spyBuyPrice)
+                print(spyBuyOrder)
+
+                orderOutcome = 'unresolved'
+
+                while orderOutcome != 'resolved':
+                    remainingUnresolved = False
+                    spyBuyOrder['status'] = rh.check_order_status(spyBuyOrder['url'])
+                    if orderResponse['status'] == 'unresolved':
+                        remainingUnresolved = True
+                    if not remainingUnresolved:
+                        orderOutcome = 'resolved'
+                    else:
+                        print('remaining unresolved spyBuy, waiting')
+                        message += '\nremaining unresolved spyBuy, waiting'
+                        time.sleep(60)
+
+
+
+                if spyBuyOrder['status'] == 'failure':
+                    success = False
+        if not success:
+            print('unable to buy required spy')
+            message += '\nunable to buy required spy'
+
+        if success:
+            if tltRequired > 0.0:
+                print('buying ',tltRequired,' of TLT')
+                tltBuyOrder = rh.place_immediate_market_order(tltInstrumentUrl,'TLT','gfd',tltRequired,'sell',tltBuyPrice)
+                print(tltBuyOrder)
+
+                orderOutcome = 'unresolved'
+
+                while orderOutcome != 'resolved':
+                    remainingUnresolved = False
+                    tltBuyOrder['status'] = rh.check_order_status(tltBuyOrder['url'])
+                    if orderResponse['status'] == 'unresolved':
+                        remainingUnresolved = True
+                    if not remainingUnresolved:
+                        orderOutcome = 'resolved'
+                    else:
+                        print('remaining unresolved tltBuy, waiting')
+                        message += '\nremaining unresolved tltBuy, waiting'
+                        time.sleep(60)
+
+
+
+                if tltBuyOrder['status'] == 'failure':
+                    success = False
+
+        if not success:
+            print('unable to buy required tlt')
+            message += '\nunable to buy required tlt'
+
+        if success:
+            success = rh.logout()
+        if not success:
+            print('unable to logout')
+            message += '\nunable to logout'
+        else:
+            print('succesfully logged out')
+            message += '\nsuccesfully logged out'
+        send_email(guser,gpass,'stephanbotes@gmail.com',('resiliant-trader log '+str(datetime.datetime.now())),message)
+    except Exception as e:
+        print("Unexpected error:", str(e))
+        send_email(guser,gpass,'stephanbotes@gmail.com',('resiliant-trader log '+str(datetime.datetime.now())),("Unexpected error: "+str(e)))
+        raise
