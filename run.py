@@ -8,6 +8,7 @@ import smtplib
 import datetime
 from pymongo import MongoClient
 import quandl
+import requests
 
 
 try:
@@ -19,6 +20,8 @@ try:
     gpass = config.gpass
     mongodb_uri = config.mongodb_uri
     quandl_key = config.quandl_key
+    mailgun_api_key = config.mailgun_api_key
+    mailgun_domain = config.mailgun_domain
 except:
     print('using environment variable')
     rhuser = os.getenv('RHUSER')
@@ -27,6 +30,8 @@ except:
     gpass = os.getenv('GPASS')
     mongodb_uri = os.getenv('MONGODB_URI')
     quandl_key = os.getenv('QUANDL_KEY')
+    mailgun_api_key = os.getenv('MAILGUN_API_KEY')
+    mailgun_domain = os.getenv('MAILGUN_DOMAIN')
 
 #from https://stackoverflow.com/questions/865618/how-can-i-perform-divison-on-a-datetime-timedelta-in-python
 
@@ -179,27 +184,20 @@ def run_gather_data():
 
 
 
-def send_email(user, pwd, recipient, subject, body):
+def send_email(domain,key,recipient, subject, body):
 
-    gmail_user = user
-    gmail_pwd = pwd
-    FROM = user
-    TO = recipient if type(recipient) is list else [recipient]
-    SUBJECT = subject
-    TEXT = body
+    mailgun_key = key
+    mailgun_domain = domain
+    request_url = 'https://api.mailgun.net/v3/'+mailgun_domain+'/messages'
+    request = requests.post(request_url, auth=('api', mailgun_key), data={
+        'from': 'trader@resiliant-trader.com',
+        'to': recipient,
+        'subject': subject,
+        'text': body
+    })
 
-    # Prepare actual message
-    message = """From: %s\nTo: %s\nSubject: %s\n\n%s
-    """ % (FROM, ", ".join(TO), SUBJECT, TEXT)
-    try:
-        server = smtplib.SMTP_SSL("smtp.gmail.com", 465)
-        server.ehlo()
-        server.login(gmail_user, gmail_pwd)
-        server.sendmail(FROM, TO, message)
-        server.close()
-        print('successfully sent the mail')
-    except:
-        print("failed to send mail")
+    print(request.status_code)
+    print(request.text)
 
 def recommendInitialTarget(portfolioValue,spyAllocationPercentage,tltAllocationPercentage,spyBuyPrice,tltBuyPrice):
     spyTargetAllocation = spyAllocationPercentage*portfolioValue
@@ -563,8 +561,8 @@ def run_trader():
         else:
             print('succesfully logged out')
             message += '\nsuccesfully logged out'
-        send_email(guser,gpass,'stephanbotes@gmail.com',('resiliant-trader log '+str(datetime.datetime.now())),message)
+        send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader log '+str(datetime.datetime.now())),message)
     except Exception as e:
         print("Unexpected error:", str(e))
-        send_email(guser,gpass,'stephanbotes@gmail.com',('resiliant-trader log '+str(datetime.datetime.now())),("Unexpected error: "+str(e)))
+        send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader log '+str(datetime.datetime.now())),("Unexpected error: "+str(e)))
         raise
