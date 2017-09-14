@@ -19,8 +19,8 @@ def trader():
     q.enqueue(run_trader)
 
 sched.add_job(trader)
-sched.add_job(trader, 'cron', day_of_week='mon-fri', hour=14, minute=30)
-sched.add_job(gather_data, 'cron', day_of_week='mon-fri', hour=12-20, minute='*',second=0)
+sched.add_job(trader, 'cron', day_of_week='mon-fri', hour="14", minute="30")
+sched.add_job(gather_data, 'cron', day_of_week='mon-fri', hour="12-20", minute='*',second="0")
 
 
 sched.start()
