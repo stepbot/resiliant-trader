@@ -6,25 +6,178 @@ import random
 import time
 import smtplib
 import datetime
+from pymongo import MongoClient
+import quandl
 
 
 try:
     import config
+    print('using local config file')
     rhuser = config.rhuser
     rhpass = config.rhpass
     guser = config.guser
     gpass = config.gpass
-    print('using local config file')
+    mongodb_uri = config.mongodb_uri
+    quandl_key = config.quandl_key
 except:
     print('using environment variable')
     rhuser = os.getenv('RHUSER')
     rhpass = os.getenv('RHPASS')
     guser = os.getenv('GUSER')
     gpass = os.getenv('GPASS')
+    mongodb_uri = os.getenv('MONGODB_URI')
+    quandl_key = os.getenv('QUANDL_KEY')
+
+#from https://stackoverflow.com/questions/865618/how-can-i-perform-divison-on-a-datetime-timedelta-in-python
+
+def divtd(td1, td2):
+    us1 = td1.microseconds + 1000000 * (td1.seconds + 86400 * td1.days)
+    us2 = td2.microseconds + 1000000 * (td2.seconds + 86400 * td2.days)
+    return float(us1) / us2
 
 def run_gather_data():
-  #code that gets and logs performance data
-  print("Gathering Data")
+    #code that gets and logs performance data
+    print("Gathering Data")
+    success = True
+
+    rh = Robinhood()
+    now = datetime.datetime.utcnow()
+    try:
+        success = rh.marketOpenCheck()
+        if not success:
+            print('markets are closed')
+            success = True
+        else:
+            print('markets are open')
+    except Exception as e:
+        print('rh market check error ', str(e))
+        success = False
+
+    if success:
+        try:
+            success = rh.login(username=rhuser, password=rhpass)
+            if success:
+                print('robinhood login succesful')
+            else:
+                print('robinhood login unsuccesful')
+        except Exception as e:
+            print('rh login error ', str(e))
+            success = False
+
+
+
+    if success:
+        try:
+            client = MongoClient(mongodb_uri)
+            db = client.get_database()
+        except Exception as e:
+            print('mongo login error ', str(e))
+            success = False
+
+    if success:
+        try:
+            #get pricing data
+            spyAskPrice = rh.ask_price('SPY')
+            spyBidPrice = rh.bid_price('SPY')
+            spyAvgCost = (spyAskPrice+spyBidPrice)/2
+            print('spyAvgCost = ', spyAvgCost)
+
+            tltAskPrice = rh.ask_price('TLT')
+            tltBidPrice = rh.bid_price('TLT')
+            tltAvgCost = (tltAskPrice+tltBidPrice)/2
+            print('tltAvgCost = ', tltAvgCost)
+        except Exception as e:
+            print('etf price error ', str(e))
+            success = False
+
+    if success:
+        try:
+            #get portfolioValue
+            portfolioValue = rh.equity()
+            print('portfolioValue =', portfolioValue)
+        except Exception as e:
+            print('portfolio value error ', str(e))
+            success = False
+
+    if success:
+        try:
+            #get treasury risk free rate
+            quandl.ApiConfig.api_key = quandl_key
+            riskFree = (quandl.get("USTREASURY/BILLRATES.3", rows=1,returns='numpy')[0])[1]
+            print('riskFree =', riskFree)
+        except Exception as e:
+            print('risk free error ', str(e))
+            success = False
+
+    if success:
+        try:
+            #get last data
+            lastData = db.rawPrices.find_one(sort=[("timestamp", -1)])
+            lastTimestamp = lastData['timestamp']
+            lastSpy = lastData['spy']
+            lastTlt = lastData['tlt']
+            lastPortfolio = lastData['portfolio']
+            lastRiskFree = lastData['annualized90day']
+        except Exception as e:
+            print('error getting previous data ', str(e))
+            success = False
+
+    if success:
+        try:
+            # calculate percentage changes
+            spyChange = (spyAvgCost-lastSpy)/lastSpy
+            print('spyChange = ',spyChange)
+            tltChange = (tltAvgCost-lastTlt)/lastTlt
+            print('tltChange = ',tltChange)
+            portfolioChange = (portfolioValue-lastPortfolio)/lastPortfolio
+            print('portfolioChange = ',portfolioChange)
+            elapsedTime = now - lastTimestamp
+            year = datetime.timedelta(days=365)
+            treasuryChange = ((1+((lastRiskFree+riskFree)/2))**(divtd(elapsedTime,year)))-1
+            print('treasuryChange = ',treasuryChange)
+        except Exception as e:
+            print('error calculating change ', str(e))
+            success = False
+
+    if success:
+        try:
+            # save data
+            percentageData = {
+                "timestamp":now,
+                "spy":spyChange,
+                "tlt":tltChange,
+                "portfolio":tltChange,
+                "90dayTreasury":treasuryChange
+            }
+            data_id = db.percentageMove.insert_one(percentageData).inserted_id
+            print("data saved to",data_id)
+        except Exception as e:
+            print('data save error ', str(e))
+            success = False
+
+
+
+    if success:
+        try:
+            # save data
+            rawData = {
+                "timestamp":now,
+                "spy":spyAvgCost,
+                "tlt":tltAvgCost,
+                "portfolio":portfolioValue,
+                "annualized90day":riskFree
+            }
+            data_id = db.rawPrices.insert_one(rawData).inserted_id
+            print("data saved to",data_id)
+        except Exception as e:
+            print('data save error ', str(e))
+            success = False
+
+
+
+
+
+
 
 def send_email(user, pwd, recipient, subject, body):
 
