@@ -51,7 +51,6 @@ def run_gather_data():
         success = rh.marketOpenCheck()
         if not success:
             print('markets are closed')
-            success = True
         else:
             print('markets are open')
     except Exception as e:
@@ -138,7 +137,7 @@ def run_gather_data():
             print('portfolioChange = ',portfolioChange)
             elapsedTime = now - lastTimestamp
             year = datetime.timedelta(days=365)
-            treasuryChange = ((1+((lastRiskFree+riskFree)/2))**(divtd(elapsedTime,year)))-1
+            treasuryChange = ((1+(((lastRiskFree+riskFree)/2))/100)**(divtd(elapsedTime,year)))-1
             print('treasuryChange = ',treasuryChange)
         except Exception as e:
             print('error calculating change ', str(e))
