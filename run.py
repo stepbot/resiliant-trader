@@ -194,8 +194,8 @@ def run_gather_data():
             print('spyPosition = ',spyPosition)
             print('tltPosition = ',tltPosition)
 
-            spyActual = spyPosition*spyAvgCost
-            tltActual = tltPosition*tltAvgCost
+            spyActual = (spyPosition*spyAvgCost)/portfolioValue
+            tltActual = (tltPosition*tltAvgCost)/portfolioValue
             print('spyActual = ',spyActual)
             print('tltActual = ',tltActual)
         except Exception as e:
