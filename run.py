@@ -128,6 +128,22 @@ def run_gather_data():
 
     if success:
         try:
+            # save data
+            rawData = {
+                "timestamp":now,
+                "spy":spyAvgCost,
+                "tlt":tltAvgCost,
+                "portfolio":portfolioValue,
+                "annualized90day":riskFree
+            }
+            data_id = db.rawPrices.insert_one(rawData).inserted_id
+            print("data saved to",data_id)
+        except Exception as e:
+            print('data save error ', str(e))
+            success = False
+
+    if success:
+        try:
             # calculate percentage changes
             spyChange = (spyAvgCost-lastSpy)/lastSpy
             print('spyChange = ',spyChange)
@@ -150,7 +166,7 @@ def run_gather_data():
                 "timestamp":now,
                 "spy":spyChange,
                 "tlt":tltChange,
-                "portfolio":tltChange,
+                "portfolio":portfolioChange,
                 "90dayTreasury":treasuryChange
             }
             data_id = db.percentageMove.insert_one(percentageData).inserted_id
@@ -158,30 +174,6 @@ def run_gather_data():
         except Exception as e:
             print('data save error ', str(e))
             success = False
-
-
-
-    if success:
-        try:
-            # save data
-            rawData = {
-                "timestamp":now,
-                "spy":spyAvgCost,
-                "tlt":tltAvgCost,
-                "portfolio":portfolioValue,
-                "annualized90day":riskFree
-            }
-            data_id = db.rawPrices.insert_one(rawData).inserted_id
-            print("data saved to",data_id)
-        except Exception as e:
-            print('data save error ', str(e))
-            success = False
-
-
-
-
-
-
 
 def send_email(domain,key,recipient, subject, body):
 
