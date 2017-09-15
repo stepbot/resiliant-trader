@@ -99,6 +99,7 @@ def run_gather_data():
             #get portfolioValue
             portfolioValue = rh.equity()
             print('portfolioValue =', portfolioValue)
+            openPositions = rh.securities_owned()['results']
         except Exception as e:
             print('portfolio value error ', str(e))
             success = False
@@ -174,6 +175,49 @@ def run_gather_data():
         except Exception as e:
             print('data save error ', str(e))
             success = False
+
+    if success:
+        try:
+            # calculate tracking
+            spyTarget = calcAlloc(rh)
+            print('spyTarget = ',spyTarget)
+            tltTarget = 1-spyTarget
+            print('tltTarget = ',tltTarget)
+            for position in openPositions:
+                instrumentURL = position['instrument']
+                positionTicker = rh.get_url(instrumentURL)['symbol']
+                positionQuantity = float(position['quantity'])
+                if (positionTicker == 'SPY'):
+                    spyPosition = positionQuantity
+                if (positionTicker == 'TLT'):
+                    tltPosition = positionQuantity
+            print('spyPosition = ',spyPosition)
+            print('tltPosition = ',tltPosition)
+
+            spyActual = spyPosition*spyAvgCost
+            tltActual = tltPosition*tltAvgCost
+            print('spyActual = ',spyActual)
+            print('tltActual = ',tltActual)
+        except Exception as e:
+            print('error calculating tracking ', str(e))
+            success = False
+
+    if success:
+        try:
+            # save tracking data
+            trackingData = {
+                "timestamp":now,
+                "spyActual":spyActual,
+                "tltActual":tltActual,
+                "spyTarget":spyTarget,
+                "tltTarget":tltTarget
+            }
+            data_id = db.tracking.insert_one(trackingData).inserted_id
+            print("data saved to",data_id)
+        except Exception as e:
+            print('data save error ', str(e))
+            success = False
+
 
 def send_email(domain,key,recipient, subject, body):
 
