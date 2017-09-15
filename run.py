@@ -100,6 +100,16 @@ def run_gather_data():
             portfolioValue = rh.equity()
             print('portfolioValue =', portfolioValue)
             openPositions = rh.securities_owned()['results']
+            for position in openPositions:
+                instrumentURL = position['instrument']
+                positionTicker = rh.get_url(instrumentURL)['symbol']
+                positionQuantity = float(position['quantity'])
+                if (positionTicker == 'SPY'):
+                    spyPosition = positionQuantity
+                if (positionTicker == 'TLT'):
+                    tltPosition = positionQuantity
+            print('spyPosition = ',spyPosition)
+            print('tltPosition = ',tltPosition)
         except Exception as e:
             print('portfolio value error ', str(e))
             success = False
@@ -183,16 +193,6 @@ def run_gather_data():
             print('spyTarget = ',spyTarget)
             tltTarget = 1-spyTarget
             print('tltTarget = ',tltTarget)
-            for position in openPositions:
-                instrumentURL = position['instrument']
-                positionTicker = rh.get_url(instrumentURL)['symbol']
-                positionQuantity = float(position['quantity'])
-                if (positionTicker == 'SPY'):
-                    spyPosition = positionQuantity
-                if (positionTicker == 'TLT'):
-                    tltPosition = positionQuantity
-            print('spyPosition = ',spyPosition)
-            print('tltPosition = ',tltPosition)
 
             spyActual = (spyPosition*spyAvgCost)/portfolioValue
             tltActual = (tltPosition*tltAvgCost)/portfolioValue
