@@ -379,7 +379,8 @@ def run_trader():
             message += str(tltBidPrice)
 
             #recommend position sizes
-            [spyTargetShares,tltTargetShares] = recommendTarget(portfolioValue,spyAllocationPercentage,tltAllocationPercentage,spyBuyPrice,tltBuyPrice)
+            #[spyTargetShares,tltTargetShares] = recommendTarget(portfolioValue,spyAllocationPercentage,tltAllocationPercentage,spyBuyPrice,tltBuyPrice)
+            [spyTargetShares,tltTargetShares] = recommendInitialTarget(portfolioValue,spyAllocationPercentage,tltAllocationPercentage,spyBuyPrice,tltBuyPrice)
 
             print('spyTargetShares = ', spyTargetShares)
             message += '\nspyTargetShares = '
@@ -387,6 +388,7 @@ def run_trader():
             print('tltTargetShares = ', tltTargetShares)
             message += '\ntltTargetShares = '
             message += str(tltTargetShares)
+
 
             targetPurchaseCost = targetTotalCost(spyTargetShares,tltTargetShares,spyBuyPrice,tltBuyPrice)
 
@@ -444,8 +446,8 @@ def run_trader():
 
                 while orderOutcome != 'resolved':
                     remainingUnresolved = False
-                    spySellOrder['status'] = rh.check_order_status(spySellOrder['url'])
-                    if orderResponse['status'] == 'unresolved':
+                    orderResponse = rh.check_order_status(spySellOrder['url'])
+                    if orderResponse == 'unresolved':
                         remainingUnresolved = True
                     if not remainingUnresolved:
                         orderOutcome = 'resolved'
@@ -474,8 +476,8 @@ def run_trader():
 
                 while orderOutcome != 'resolved':
                     remainingUnresolved = False
-                    tltSellOrder['status'] = rh.check_order_status(tltSellOrder['url'])
-                    if orderResponse['status'] == 'unresolved':
+                    orderResponse = rh.check_order_status(tltSellOrder['url'])
+                    if orderResponse == 'unresolved':
                         remainingUnresolved = True
                     if not remainingUnresolved:
                         orderOutcome = 'resolved'
@@ -498,15 +500,15 @@ def run_trader():
         if success:
             if spyRequired > 0.0:
                 print('buying ',spyRequired,' of SPY')
-                spyBuyOrder = rh.place_immediate_market_order(spyInstrumentUrl,'SPY','gfd',spyRequired,'sell',spyBuyPrice)
+                spyBuyOrder = rh.place_immediate_market_order(spyInstrumentUrl,'SPY','gfd',spyRequired,'buy',round(spyBuyPrice, 3))
                 print(spyBuyOrder)
 
                 orderOutcome = 'unresolved'
 
                 while orderOutcome != 'resolved':
                     remainingUnresolved = False
-                    spyBuyOrder['status'] = rh.check_order_status(spyBuyOrder['url'])
-                    if orderResponse['status'] == 'unresolved':
+                    orderResponse = rh.check_order_status(spyBuyOrder['url'])
+                    if orderResponse == 'unresolved':
                         remainingUnresolved = True
                     if not remainingUnresolved:
                         orderOutcome = 'resolved'
@@ -526,15 +528,15 @@ def run_trader():
         if success:
             if tltRequired > 0.0:
                 print('buying ',tltRequired,' of TLT')
-                tltBuyOrder = rh.place_immediate_market_order(tltInstrumentUrl,'TLT','gfd',tltRequired,'sell',tltBuyPrice)
+                tltBuyOrder = rh.place_immediate_market_order(tltInstrumentUrl,'TLT','gfd',tltRequired,'buy',round(tltBuyPrice, 3))
                 print(tltBuyOrder)
 
                 orderOutcome = 'unresolved'
 
                 while orderOutcome != 'resolved':
                     remainingUnresolved = False
-                    tltBuyOrder['status'] = rh.check_order_status(tltBuyOrder['url'])
-                    if orderResponse['status'] == 'unresolved':
+                    orderResponse = rh.check_order_status(tltBuyOrder['url'])
+                    if orderResponse == 'unresolved':
                         remainingUnresolved = True
                     if not remainingUnresolved:
                         orderOutcome = 'resolved'
