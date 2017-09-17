@@ -148,12 +148,13 @@ class Robinhood:
         for market in marketData:
             marketTimeData = self.get_url(market['todays_hours'])
             status = marketTimeData['is_open']
-            openTime = marketTimeData['opens_at']
-            openTimeObject = datetime.strptime(openTime,'%Y-%m-%dT%H:%M:%SZ')
-            closeTime = marketTimeData['closes_at']
-            closeTimeObject= datetime.strptime(closeTime,'%Y-%m-%dT%H:%M:%SZ')
             if status == 'false':
                 canTrade = False
+            if canTrade:
+                openTime = marketTimeData['opens_at']
+                openTimeObject = datetime.strptime(openTime,'%Y-%m-%dT%H:%M:%SZ')
+                closeTime = marketTimeData['closes_at']
+                closeTimeObject= datetime.strptime(closeTime,'%Y-%m-%dT%H:%M:%SZ')    
             if now < openTimeObject:
                 canTrade = False
             if now > closeTimeObject:
