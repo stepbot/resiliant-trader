@@ -508,7 +508,7 @@ def run_trader():
 
 
 
-                if spySellOrder['status'] == 'failure':
+                if orderResponse == 'failure':
                     success = False
 
         if not success:
@@ -537,7 +537,7 @@ def run_trader():
 
 
 
-                if tltSellOrder['status'] == 'failure':
+                if orderResponse == 'failure':
                     success = False
 
         if not success:
@@ -568,7 +568,7 @@ def run_trader():
 
 
 
-                if spyBuyOrder['status'] == 'failure':
+                if orderResponse == 'failure':
                     success = False
         if not success:
             print('unable to buy required spy')
@@ -596,7 +596,7 @@ def run_trader():
 
 
 
-                if tltBuyOrder['status'] == 'failure':
+                if orderResponse == 'failure':
                     success = False
 
         if not success:

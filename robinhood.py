@@ -150,17 +150,20 @@ class Robinhood:
             status = marketTimeData['is_open']
             if status == False:
                 canTrade = False
+                print('is_open flag not true')
             else:
+                print('is_open flag true')
                 openTime = marketTimeData['opens_at']
                 openTimeObject = datetime.strptime(openTime,'%Y-%m-%dT%H:%M:%SZ')
                 closeTime = marketTimeData['closes_at']
                 closeTimeObject= datetime.strptime(closeTime,'%Y-%m-%dT%H:%M:%SZ')
             if not (status == False):
-                canTrade = False
                 if now < openTimeObject:
                     canTrade = False
+                    print('time before open')
                 if now > closeTimeObject:
-                    canTrade = False    
+                    canTrade = False
+                    print('time after close')
         return canTrade
 
 
