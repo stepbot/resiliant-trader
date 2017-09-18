@@ -54,8 +54,9 @@ def run_gather_data():
         else:
             print('markets are open')
     except Exception as e:
-        print('rh market check error ', str(e))
         success = False
+        print('rh market check error ', str(e))
+        send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("rh market check error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -65,8 +66,10 @@ def run_gather_data():
             else:
                 print('robinhood login unsuccesful')
         except Exception as e:
-            print('rh login error ', str(e))
             success = False
+            print('rh login error ', str(e))
+            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("rh login error. Unexpected error: "+str(e)))
+
 
 
 
@@ -77,6 +80,7 @@ def run_gather_data():
         except Exception as e:
             print('mongo login error ', str(e))
             success = False
+            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("mongo login error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -93,6 +97,7 @@ def run_gather_data():
         except Exception as e:
             print('etf price error ', str(e))
             success = False
+            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("etf price error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -113,6 +118,7 @@ def run_gather_data():
         except Exception as e:
             print('portfolio value error ', str(e))
             success = False
+            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("portfolio value error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -123,6 +129,7 @@ def run_gather_data():
         except Exception as e:
             print('risk free error ', str(e))
             success = False
+            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("risk free error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -136,6 +143,7 @@ def run_gather_data():
         except Exception as e:
             print('error getting previous data ', str(e))
             success = False
+            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("error getting previous data. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -152,6 +160,7 @@ def run_gather_data():
         except Exception as e:
             print('data save error ', str(e))
             success = False
+            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("error calculating change. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -169,6 +178,7 @@ def run_gather_data():
         except Exception as e:
             print('error calculating change ', str(e))
             success = False
+            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("error calculating change. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -185,6 +195,7 @@ def run_gather_data():
         except Exception as e:
             print('data save error ', str(e))
             success = False
+            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("data save error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -201,6 +212,7 @@ def run_gather_data():
         except Exception as e:
             print('error calculating tracking ', str(e))
             success = False
+            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("error calculating tracking. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -215,8 +227,9 @@ def run_gather_data():
             data_id = db.tracking.insert_one(trackingData).inserted_id
             print("data saved to",data_id)
         except Exception as e:
-            print('data save error ', str(e))
+            print('tracking data save error ', str(e))
             success = False
+            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("tracking data save error. Unexpected error: "+str(e)))
 
 
 def send_email(domain,key,recipient, subject, body):
