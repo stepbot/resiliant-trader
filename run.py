@@ -103,6 +103,8 @@ def run_gather_data():
         try:
             #get portfolioValue
             portfolioValue = rh.equity()
+            tltPosition = 0
+            spyPosition = 0
             print('portfolioValue =', portfolioValue)
             openPositions = rh.securities_owned()['results']
             for position in openPositions:
