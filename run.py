@@ -22,6 +22,7 @@ try:
     quandl_key = config.quandl_key
     mailgun_api_key = config.mailgun_api_key
     mailgun_domain = config.mailgun_domain
+    diag_email_dest = config.diag_email_dest
 except:
     print('using environment variable')
     rhuser = os.getenv('RHUSER')
@@ -32,6 +33,7 @@ except:
     quandl_key = os.getenv('QUANDL_KEY')
     mailgun_api_key = os.getenv('MAILGUN_API_KEY')
     mailgun_domain = os.getenv('MAILGUN_DOMAIN')
+    diag_email_dest = os.getenv('DIAG_EMAIL_DEST')
 
 #from https://stackoverflow.com/questions/865618/how-can-i-perform-divison-on-a-datetime-timedelta-in-python
 
@@ -56,7 +58,7 @@ def run_gather_data():
     except Exception as e:
         success = False
         print('rh market check error ', str(e))
-        send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("rh market check error. Unexpected error: "+str(e)))
+        send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("rh market check error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -68,7 +70,7 @@ def run_gather_data():
         except Exception as e:
             success = False
             print('rh login error ', str(e))
-            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("rh login error. Unexpected error: "+str(e)))
+            send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("rh login error. Unexpected error: "+str(e)))
 
 
 
@@ -80,7 +82,7 @@ def run_gather_data():
         except Exception as e:
             print('mongo login error ', str(e))
             success = False
-            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("mongo login error. Unexpected error: "+str(e)))
+            send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("mongo login error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -97,7 +99,7 @@ def run_gather_data():
         except Exception as e:
             print('etf price error ', str(e))
             success = False
-            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("etf price error. Unexpected error: "+str(e)))
+            send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("etf price error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -120,7 +122,7 @@ def run_gather_data():
         except Exception as e:
             print('portfolio value error ', str(e))
             success = False
-            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("portfolio value error. Unexpected error: "+str(e)))
+            send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("portfolio value error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -131,7 +133,7 @@ def run_gather_data():
         except Exception as e:
             print('risk free error ', str(e))
             success = False
-            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("risk free error. Unexpected error: "+str(e)))
+            send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("risk free error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -145,7 +147,7 @@ def run_gather_data():
         except Exception as e:
             print('error getting previous data ', str(e))
             success = False
-            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("error getting previous data. Unexpected error: "+str(e)))
+            send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("error getting previous data. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -162,7 +164,7 @@ def run_gather_data():
         except Exception as e:
             print('data save error ', str(e))
             success = False
-            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("error calculating change. Unexpected error: "+str(e)))
+            send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("error calculating change. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -180,7 +182,7 @@ def run_gather_data():
         except Exception as e:
             print('error calculating change ', str(e))
             success = False
-            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("error calculating change. Unexpected error: "+str(e)))
+            send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("error calculating change. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -197,7 +199,7 @@ def run_gather_data():
         except Exception as e:
             print('data save error ', str(e))
             success = False
-            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("data save error. Unexpected error: "+str(e)))
+            send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("data save error. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -214,7 +216,7 @@ def run_gather_data():
         except Exception as e:
             print('error calculating tracking ', str(e))
             success = False
-            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("error calculating tracking. Unexpected error: "+str(e)))
+            send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("error calculating tracking. Unexpected error: "+str(e)))
 
     if success:
         try:
@@ -231,7 +233,7 @@ def run_gather_data():
         except Exception as e:
             print('tracking data save error ', str(e))
             success = False
-            send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader data gather error '+str(datetime.datetime.now())),("tracking data save error. Unexpected error: "+str(e)))
+            send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader data gather error '+str(datetime.datetime.now())),("tracking data save error. Unexpected error: "+str(e)))
 
 
 def send_email(domain,key,recipient, subject, body):
@@ -613,8 +615,8 @@ def run_trader():
         else:
             print('succesfully logged out')
             message += '\nsuccesfully logged out'
-        send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader log '+str(datetime.datetime.now())),message)
+        send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader log '+str(datetime.datetime.now())),message)
     except Exception as e:
         print("Unexpected error:", str(e))
-        send_email(mailgun_domain,mailgun_api_key,'stephanbotes@gmail.com',('resiliant-trader log '+str(datetime.datetime.now())),("Unexpected error: "+str(e)))
+        send_email(mailgun_domain,mailgun_api_key,diag_email_dest,('resiliant-trader log '+str(datetime.datetime.now())),("Unexpected error: "+str(e)))
         raise
