@@ -301,7 +301,8 @@ def calcAlloc(rh):
 	totalVolatility = spyVolatility+tltVolatility
 
 	spyRawAllocation = 1-(spyVolatility/totalVolatility)
-	spyAllocation = 1/(1+math.exp(-20*(spyRawAllocation-.5)))
+	#spyAllocation = 1/(1+math.exp(-20*(spyRawAllocation-.5)))
+    spyAllocation = spyRawAllocation
 	if spyAllocation > 1:
 		spyAllocation = 1
 	if spyAllocation < 0:
