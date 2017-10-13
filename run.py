@@ -280,35 +280,36 @@ def allocationLoss(spyTarget,spyAchieved,tltTarget,tltAchieved):
 
 
 def calcAlloc(rh):
-	spyHist = rh.get_historical_quote('SPY','5minute','week')
-	tltHist = rh.get_historical_quote('TLT','5minute','week')
+    spyHist = rh.get_historical_quote('SPY','5minute','week')
+    tltHist = rh.get_historical_quote('TLT','5minute','week')
 
-	spyPrices = spyHist[:,4]
-	spyVolumes = spyHist[:,5]
+    spyPrices = spyHist[:,4]
+    spyVolumes = spyHist[:,5]
 
-	tltPrices = tltHist[:,4]
-	tltVolumes = tltHist[:,5]
+    tltPrices = tltHist[:,4]
+    tltVolumes = tltHist[:,5]
 
-	spyVWAP = np.average(spyPrices, axis=0, weights=spyVolumes)
-	tltVWAP = np.average(tltPrices, axis=0, weights=tltVolumes)
+    spyVWAP = np.average(spyPrices, axis=0, weights=spyVolumes)
+    tltVWAP = np.average(tltPrices, axis=0, weights=tltVolumes)
 
-	spyPricesNorm = spyPrices/spyVWAP
-	tltPricesNorm = tltPrices/tltVWAP
+    spyPricesNorm = spyPrices/spyVWAP
+    tltPricesNorm = tltPrices/tltVWAP
 
-	spyVolatility = np.std(spyPricesNorm)
-	tltVolatility = np.std(tltPricesNorm)
+    spyVolatility = np.std(spyPricesNorm)
+    tltVolatility = np.std(tltPricesNorm)
 
-	totalVolatility = spyVolatility+tltVolatility
+    totalVolatility = spyVolatility+tltVolatility
 
-	spyRawAllocation = 1-(spyVolatility/totalVolatility)
-	#spyAllocation = 1/(1+math.exp(-20*(spyRawAllocation-.5)))
+    spyRawAllocation = 1-(spyVolatility/totalVolatility)
     spyAllocation = spyRawAllocation
-	if spyAllocation > 1:
-		spyAllocation = 1
-	if spyAllocation < 0:
-		spyAllocation = 0
+    #spyAllocation = 1/(1+math.exp(-20*(spyRawAllocation-.5)))
 
-	return spyAllocation
+    if spyAllocation > 1:
+        spyAllocation = 1
+    if spyAllocation < 0:
+        spyAllocation = 0
+
+    return spyAllocation
 
 def run_trader():
     try:
